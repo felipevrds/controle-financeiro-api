@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.*
+import kotlin.jvm.java
 
 class ApiKeyFilterTest {
 
