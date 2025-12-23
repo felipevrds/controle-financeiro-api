@@ -14,94 +14,188 @@ class SubcategoriaRepositoryAdapterTest {
 
     private val repo: SubcategoriaJpaRepository = Mockito.mock(SubcategoriaJpaRepository::class.java)
     private val categoriaRepo: CategoriaJpaRepository = Mockito.mock(CategoriaJpaRepository::class.java)
+
     private val adapter = SubcategoriaRepositoryAdapter(repo, categoriaRepo)
 
     @Test
-    fun `create deve salvar e retornar entity`() {
-        val cat = CategoriaPersistenceEntity(idCategoria = 1L, nome = "Transporte")
-        Mockito.`when`(categoriaRepo.findById(1L)).thenReturn(Optional.of(cat))
+    fun `create deve buscar categoria, salvar e mapear`() {
+        val cat = CategoriaPersistenceEntity(idCategoria = 10L, nome = "Transporte")
+        Mockito.`when`(categoriaRepo.findById(10L)).thenReturn(Optional.of(cat))
 
-        val saved = SubcategoriaPersistenceEntity(idSubcategoria = 10L, nome = "Uber", categoria = cat)
+        val saved = SubcategoriaPersistenceEntity(
+            idSubcategoria = 7L,
+            nome = "Uber",
+            categoria = cat
+        )
         Mockito.`when`(repo.save(Mockito.any(SubcategoriaPersistenceEntity::class.java))).thenReturn(saved)
 
-        val result = adapter.create("Uber", 1L)
+        val result = adapter.create("Uber", 10L)
 
-        assertEquals(10L, result.idSubcategoria)
+        assertEquals(7L, result.idSubcategoria)
         assertEquals("Uber", result.nome)
-        assertEquals(1L, result.idCategoria)
-        Mockito.verify(categoriaRepo).findById(1L)
+        assertEquals(10L, result.idCategoria)
+
+        Mockito.verify(categoriaRepo).findById(10L)
         Mockito.verify(repo).save(Mockito.any(SubcategoriaPersistenceEntity::class.java))
     }
 
     @Test
-    fun `update deve alterar e salvar`() {
-        val cat = CategoriaPersistenceEntity(idCategoria = 2L, nome = "Casa")
-        val existing = SubcategoriaPersistenceEntity(idSubcategoria = 3L, nome = "Antigo", categoria = cat)
+    fun `create deve lançar NotFound quando categoria não existe`() {
+        Mockito.`when`(categoriaRepo.findById(999L)).thenReturn(Optional.empty())
 
-        Mockito.`when`(repo.findById(3L)).thenReturn(Optional.of(existing))
-        Mockito.`when`(categoriaRepo.findById(2L)).thenReturn(Optional.of(cat))
-        Mockito.`when`(repo.save(existing)).thenReturn(existing.apply { nome = "Novo" })
+        val ex = assertThrows(NotFoundException::class.java) {
+            adapter.create("Uber", 999L)
+        }
+        assertEquals("Categoria não encontrada", ex.message)
 
-        val result = adapter.update(3L, "Novo", 2L)
+        Mockito.verify(repo, Mockito.never()).save(Mockito.any(SubcategoriaPersistenceEntity::class.java))
+    }
 
-        assertEquals(3L, result.idSubcategoria)
-        assertEquals("Novo", result.nome)
+    @Test
+    fun `update deve atualizar nome e categoria, salvar e mapear`() {
+        val catOld = CategoriaPersistenceEntity(idCategoria = 1L, nome = "Transporte")
+        val catNew = CategoriaPersistenceEntity(idCategoria = 2L, nome = "Alimentação")
+
+        val existing = SubcategoriaPersistenceEntity(
+            idSubcategoria = 5L,
+            nome = "Uber",
+            categoria = catOld
+        )
+
+        Mockito.`when`(repo.findById(5L)).thenReturn(Optional.of(existing))
+        Mockito.`when`(categoriaRepo.findById(2L)).thenReturn(Optional.of(catNew))
+        Mockito.`when`(repo.save(Mockito.any(SubcategoriaPersistenceEntity::class.java))).thenAnswer { it.arguments[0] }
+
+        val result = adapter.update(5L, "Restaurante", 2L)
+
+        assertEquals(5L, result.idSubcategoria)
+        assertEquals("Restaurante", result.nome)
         assertEquals(2L, result.idCategoria)
-        Mockito.verify(repo).findById(3L)
+
+        // garante mutação do entity
+        assertEquals("Restaurante", existing.nome)
+        assertEquals(catNew, existing.categoria)
+
+        Mockito.verify(repo).findById(5L)
         Mockito.verify(categoriaRepo).findById(2L)
-        Mockito.verify(repo).save(existing)
+        Mockito.verify(repo).save(Mockito.any(SubcategoriaPersistenceEntity::class.java))
     }
 
     @Test
     fun `update deve lançar NotFound quando subcategoria não existe`() {
         Mockito.`when`(repo.findById(999L)).thenReturn(Optional.empty())
 
-        assertThrows(NotFoundException::class.java) {
+        val ex = assertThrows(NotFoundException::class.java) {
             adapter.update(999L, "X", 1L)
         }
-        Mockito.verify(repo).findById(999L)
+        assertEquals("Subcategoria não encontrada", ex.message)
+
+        Mockito.verify(categoriaRepo, Mockito.never()).findById(Mockito.anyLong())
+        Mockito.verify(repo, Mockito.never()).save(Mockito.any(SubcategoriaPersistenceEntity::class.java))
     }
 
     @Test
-    fun `delete deve apagar por id`() {
-        Mockito.doNothing().`when`(repo).deleteById(7L)
+    fun `update deve lançar NotFound quando categoria não existe`() {
+        val catOld = CategoriaPersistenceEntity(idCategoria = 1L, nome = "Transporte")
+        val existing = SubcategoriaPersistenceEntity(
+            idSubcategoria = 5L,
+            nome = "Uber",
+            categoria = catOld
+        )
 
-        adapter.delete(7L)
+        Mockito.`when`(repo.findById(5L)).thenReturn(Optional.of(existing))
+        Mockito.`when`(categoriaRepo.findById(999L)).thenReturn(Optional.empty())
 
-        Mockito.verify(repo).deleteById(7L)
+        val ex = assertThrows(NotFoundException::class.java) {
+            adapter.update(5L, "X", 999L)
+        }
+        assertEquals("Categoria não encontrada", ex.message)
+
+        Mockito.verify(repo, Mockito.never()).save(Mockito.any(SubcategoriaPersistenceEntity::class.java))
     }
 
     @Test
-    fun `findById deve mapear`() {
-        val cat = CategoriaPersistenceEntity(idCategoria = 1L, nome = "Transporte")
-        val existing = SubcategoriaPersistenceEntity(idSubcategoria = 11L, nome = "Uber", categoria = cat)
-        Mockito.`when`(repo.findById(11L)).thenReturn(Optional.of(existing))
+    fun `delete deve delegar para repo`() {
+        adapter.delete(10L)
+        Mockito.verify(repo).deleteById(10L)
+    }
 
-        val result = adapter.findById(11L)
+    @Test
+    fun `findById deve mapear quando existe`() {
+        val cat = CategoriaPersistenceEntity(idCategoria = 10L, nome = "Transporte")
+        val entity = SubcategoriaPersistenceEntity(
+            idSubcategoria = 7L,
+            nome = "Uber",
+            categoria = cat
+        )
+        Mockito.`when`(repo.findById(7L)).thenReturn(Optional.of(entity))
+
+        val result = adapter.findById(7L)
 
         assertNotNull(result)
-        assertEquals(11L, result!!.idSubcategoria)
+        assertEquals(7L, result!!.idSubcategoria)
         assertEquals("Uber", result.nome)
-        assertEquals(1L, result.idCategoria)
+        assertEquals(10L, result.idCategoria)
+    }
+
+    @Test
+    fun `findById deve retornar null quando não existe`() {
+        Mockito.`when`(repo.findById(7L)).thenReturn(Optional.empty())
+        val result = adapter.findById(7L)
+        assertNull(result)
+    }
+
+    @Test
+    fun `search deve retornar findAll quando nome é null ou blank`() {
+        val cat = CategoriaPersistenceEntity(idCategoria = 10L, nome = "Transporte")
+        val e1 = SubcategoriaPersistenceEntity(idSubcategoria = 1L, nome = "Uber", categoria = cat)
+        val e2 = SubcategoriaPersistenceEntity(idSubcategoria = 2L, nome = "Ônibus", categoria = cat)
+
+        Mockito.`when`(repo.findAll()).thenReturn(listOf(e1, e2))
+
+        val result = adapter.search(null)
+
+        assertEquals(2, result.size)
+        Mockito.verify(repo).findAll()
+        Mockito.verify(repo, Mockito.never()).findAllByNomeContainingIgnoreCase(Mockito.anyString())
+    }
+
+    @Test
+    fun `search deve filtrar por nome quando informado`() {
+        val cat = CategoriaPersistenceEntity(idCategoria = 10L, nome = "Transporte")
+        val e1 = SubcategoriaPersistenceEntity(idSubcategoria = 1L, nome = "Uber", categoria = cat)
+
+        Mockito.`when`(repo.findAllByNomeContainingIgnoreCase("ub")).thenReturn(listOf(e1))
+
+        val result = adapter.search("ub")
+
+        assertEquals(1, result.size)
+        assertEquals("Uber", result[0].nome)
+        Mockito.verify(repo).findAllByNomeContainingIgnoreCase("ub")
+        Mockito.verify(repo, Mockito.never()).findAll()
     }
 
     @Test
     fun `existsByNomeInCategoria deve delegar`() {
-        Mockito.`when`(repo.existsByNomeAndCategoria_IdCategoria("Uber", 1L)).thenReturn(true)
+        Mockito.`when`(repo.existsByNomeAndCategoria_IdCategoria("Uber", 10L)).thenReturn(true)
 
-        assertTrue(adapter.existsByNomeInCategoria("Uber", 1L))
-        Mockito.verify(repo).existsByNomeAndCategoria_IdCategoria("Uber", 1L)
+        assertTrue(adapter.existsByNomeInCategoria("Uber", 10L))
+        Mockito.verify(repo).existsByNomeAndCategoria_IdCategoria("Uber", 10L)
     }
 
     @Test
-    fun `findAllByCategoria deve mapear`() {
-        val cat = CategoriaPersistenceEntity(idCategoria = 1L, nome = "Transporte")
-        val list = listOf(SubcategoriaPersistenceEntity(idSubcategoria = 3L, nome = "Uber", categoria = cat))
-        Mockito.`when`(repo.findAllByCategoria_IdCategoria(1L)).thenReturn(list)
+    fun `findAllByCategoria deve mapear lista`() {
+        val cat = CategoriaPersistenceEntity(idCategoria = 10L, nome = "Transporte")
+        val e1 = SubcategoriaPersistenceEntity(idSubcategoria = 1L, nome = "Uber", categoria = cat)
+        val e2 = SubcategoriaPersistenceEntity(idSubcategoria = 2L, nome = "Ônibus", categoria = cat)
 
-        val result = adapter.findAllByCategoria(1L)
+        Mockito.`when`(repo.findAllByCategoria_IdCategoria(10L)).thenReturn(listOf(e1, e2))
 
-        assertEquals(1, result.size)
-        assertEquals(3L, result[0].idSubcategoria)
+        val result = adapter.findAllByCategoria(10L)
+
+        assertEquals(2, result.size)
+        assertEquals(10L, result[0].idCategoria)
+        assertEquals("Uber", result[0].nome)
+        Mockito.verify(repo).findAllByCategoria_IdCategoria(10L)
     }
 }

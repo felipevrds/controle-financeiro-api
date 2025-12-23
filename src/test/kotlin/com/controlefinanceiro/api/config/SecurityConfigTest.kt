@@ -1,38 +1,41 @@
 package com.controlefinanceiro.api.config
 
-import org.junit.jupiter.api.Assertions.assertNotNull
+import com.controlefinanceiro.api.adapters.inbound.security.ApiKeyFilter
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.springframework.boot.autoconfigure.AutoConfigurations
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-import org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration
-import org.springframework.boot.test.context.runner.WebApplicationContextRunner
-import org.springframework.security.web.SecurityFilterChain
-import kotlin.jvm.java
+import org.mockito.ArgumentCaptor
+import org.mockito.Mockito.*
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.web.DefaultSecurityFilterChain
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.web.filter.OncePerRequestFilter
 
 class SecurityConfigTest {
 
-    private val contextRunner = WebApplicationContextRunner()
-        .withConfiguration(
-            AutoConfigurations.of(
-                // garante contexto web (servlet)
-                DispatcherServletAutoConfiguration::class.java,
-                // garante o stack de security web
-                SecurityAutoConfiguration::class.java,
-                UserDetailsServiceAutoConfiguration::class.java
-            )
-        )
-        .withUserConfiguration(SecurityConfig::class.java)
-
     @Test
-    fun `deve registrar SecurityFilterChain no contexto`() {
-        val contextRunner = WebApplicationContextRunner()
-        .withConfiguration(
-            AutoConfigurations.of(
-                SecurityAutoConfiguration::class.java,
-                UserDetailsServiceAutoConfiguration::class.java
-            )
+    fun `filterChain deve construir SecurityFilterChain e registrar ApiKeyFilter antes do UsernamePasswordAuthenticationFilter`() {
+        val http = mock(HttpSecurity::class.java, RETURNS_SELF)
+
+        // build() retorna DefaultSecurityFilterChain
+        val expectedChain = mock(DefaultSecurityFilterChain::class.java)
+        `when`(http.build()).thenReturn(expectedChain)
+
+        val config = SecurityConfig()
+
+        val chain = config.filterChain(http)
+
+        verify(http).build()
+        assertSame(expectedChain, chain)
+
+        val filterCaptor: ArgumentCaptor<OncePerRequestFilter> =
+            ArgumentCaptor.forClass(OncePerRequestFilter::class.java)
+
+        verify(http).addFilterBefore(
+            filterCaptor.capture(),
+            eq(UsernamePasswordAuthenticationFilter::class.java)
         )
-        .withUserConfiguration(SecurityConfig::class.java)
+
+        assertTrue(filterCaptor.value is ApiKeyFilter)
     }
 }
