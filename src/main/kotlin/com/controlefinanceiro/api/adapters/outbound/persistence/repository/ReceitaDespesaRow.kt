@@ -2,7 +2,7 @@ package com.controlefinanceiro.api.adapters.outbound.persistence.repository
 
 import java.math.BigDecimal
 
-interface ReceitaDespesaRow {
+interface ReceitaDespesaProjection {
     val receita: BigDecimal?
     val despesa: BigDecimal?
 }

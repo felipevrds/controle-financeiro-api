@@ -24,7 +24,6 @@ class BalancoController(
         val result = balancoService.calcular(dataInicio, dataFim, idCategoria)
 
         val categoriaDto = if (result.idCategoria != null) {
-            // Aqui pode ser necessário colocar para retornar idCategoria !!, se quebrar quando não tiver esse filtro
             CategoriaResponseDto(result.idCategoria, result.nomeCategoria!!)
         } else null
 

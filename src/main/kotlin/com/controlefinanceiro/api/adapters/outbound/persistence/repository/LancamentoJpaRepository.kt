@@ -31,6 +31,6 @@ interface LancamentoJpaRepository : JpaRepository<LancamentoPersistenceEntity, L
         @Param("dataInicio") dataInicio: LocalDate,
         @Param("dataFim") dataFim: LocalDate,
         @Param("idCategoria") idCategoria: Long?
-    ): ReceitaDespesaRow
+    ): ReceitaDespesaProjection
 
 }

@@ -4,7 +4,7 @@ import com.controlefinanceiro.api.adapters.outbound.persistence.entity.Categoria
 import com.controlefinanceiro.api.adapters.outbound.persistence.entity.LancamentoPersistenceEntity
 import com.controlefinanceiro.api.adapters.outbound.persistence.entity.SubcategoriaPersistenceEntity
 import com.controlefinanceiro.api.adapters.outbound.persistence.repository.LancamentoJpaRepository
-import com.controlefinanceiro.api.adapters.outbound.persistence.repository.ReceitaDespesaRow
+import com.controlefinanceiro.api.adapters.outbound.persistence.repository.ReceitaDespesaProjection
 import com.controlefinanceiro.api.adapters.outbound.persistence.repository.SubcategoriaJpaRepository
 import com.controlefinanceiro.api.exception.NotFoundException
 import com.controlefinanceiro.api.exception.ValidationException
@@ -118,7 +118,7 @@ class LancamentoRepositoryAdapterTest {
 
     @Test
     fun `sumReceitaDespesa deve mapear receita e despesa com scale 2`() {
-        val row = object : ReceitaDespesaRow {
+        val row = object : ReceitaDespesaProjection {
             override val receita: BigDecimal? = BigDecimal("40.0")
             override val despesa: BigDecimal? = BigDecimal("15.0")
         }
@@ -261,7 +261,7 @@ class LancamentoRepositoryAdapterTest {
 
     @Test
     fun `sumReceitaDespesa deve tratar null como zero`() {
-        val row = object : ReceitaDespesaRow {
+        val row = object : ReceitaDespesaProjection {
             override val receita: BigDecimal? = null
             override val despesa: BigDecimal? = null
         }

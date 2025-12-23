@@ -15,7 +15,7 @@ class SecurityConfig {
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
-            .headers { headers -> headers.frameOptions { it.sameOrigin() } } // <- ESSENCIAL p/ H2 Console
+            .headers { headers -> headers.frameOptions { it.sameOrigin() } } // <- p/ H2 Console
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/h2-console/**").permitAll()
